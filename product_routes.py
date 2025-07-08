@@ -1,25 +1,33 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from dependencies import get_session
 from models import Product, Offer, StoreBranch
-import math
 from sqlalchemy import func
+
+import math
 
 product_router = APIRouter(prefix="/product", tags=["products"])
 
 # Rota de lista de produto
 @product_router.get("/")
 async def get_list_products(
+    id_store: int = Query(None, description="Teste"),
     page: int = Query(1, description="Page", ge=1),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
     session: Session = Depends(get_session)
 ):
-    
     page_size = 5
     offset = (page - 1) * page_size
-    
+
+    if not id_store:
+        return list_all_products(page_size, offset, lat, lon, session)
+    else:
+        return list_products_by_store(id_store, page_size, offset, lat, lon, session)
+        
+
+def list_all_products(page_size, offset, lat, lon, session):
     # 1) Subquery: para cada produto, qual é o menor preço?
     min_price_sq = (
         session.query(
@@ -73,6 +81,63 @@ async def get_list_products(
     
     return [serialize_product(product, lat, lon) for product in products]
 
+def list_products_by_store(id_store, page_size, offset, lat, lon, session):
+    SB2 = aliased(StoreBranch)
+    O2 = aliased(Offer)
+    P = aliased(Product)
+    SB3 = aliased(StoreBranch)
+    O3 = aliased(Offer)
+
+    # Subquery para obter o menor preço por produto na mesma loja (id_store)
+    subq = (
+        session.query(func.min(O3.current_price))
+        .join(SB3, SB3.id == O3.id_store_branch)
+        .filter(
+            O3.id_product == O2.id_product,
+            SB3.id_store == id_store
+        )
+        .scalar_subquery()
+    )
+
+    # Cálculo da distância em metros pelo Haversine
+    distance = func.round(
+        6371000 * 2 * func.asin(
+            func.sqrt(
+                func.power((func.radians(SB2.latitude) - func.radians(lat)) / 2, 2)
+                + func.cos(func.radians(lat)) * func.cos(func.radians(SB2.latitude))
+                * func.power((func.radians(SB2.longitude) - func.radians(lon)) / 2, 2)
+            )
+        )
+    ).label('distance')
+
+    # Query principal: inicia a partir de SB2 para evitar aliases duplicados
+    results = (
+        session.query(P.id)
+        .select_from(SB2)
+        .join(O2, O2.id_store_branch == SB2.id)
+        .join(P, P.id == O2.id_product)
+        .filter(O2.current_price == subq)
+        .order_by(distance)
+        .limit(page_size)
+        .offset(offset)
+        .all()
+    )
+
+    # Extrai IDs (cada resultado é tupla: (id,))
+    product_ids = [r[0] for r in results]
+
+    # Busca objetos Product e preserva a ordem original usando FIELD (MySQL)
+    products = (
+        session
+        .query(Product)
+        .filter(Product.id.in_(product_ids))
+        .order_by(func.field(Product.id, *product_ids))
+        .all()
+    )
+
+    # Serializa e retorna
+    return [serialize_product(product, lat, lon) for product in products]
+
 # Rota de busca de produto único
 @product_router.get("/{id}")
 async def get_product(
@@ -101,7 +166,7 @@ def serialize_product(p: Product, lat: float, lon: float) -> dict:
             "expiration": p.expiration,
             "stores" : [
                 {
-                    "id" : o.id_store_branch,
+                    "id" : o.store_branch.id_store,
                     "name" : o.store_branch.store.name,
                     "branch" : o.store_branch.description,
                     "current_price" : o.current_price,
