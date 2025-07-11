@@ -110,6 +110,10 @@ def list_products_by_store(id_store, page_size, offset, lat, lon, session):
 
 # Transforma o resultado de uma query na tabela Product num objeto Product
 def serialize_product(p: Product, lat: float, lon: float) -> dict:
+
+    prices = [o.current_price for o in p.offers if o.current_price is not None]
+    avg_price = sum(prices) / len(prices) if prices else 0
+
     return {
             "id": p.id,
             "name": p.name,
@@ -124,6 +128,11 @@ def serialize_product(p: Product, lat: float, lon: float) -> dict:
                     "name" : o.store_branch.store.name,
                     "branch" : o.store_branch.description,
                     "current_price" : o.current_price,
+                    "discount_percentage": round(
+                        ((avg_price - o.current_price) / avg_price) * 100
+                        if avg_price > 0 and o.current_price is not None
+                        else 0
+                    ),
                     "previous_price" : o.previous_price,
                     "expiration_offer" : o.expiration,
                     "logo" : o.store_branch.store.logo,

@@ -3,23 +3,24 @@ from dependencies import get_session
 from database.models import Product, StoreBranch, Store, Category, Offer
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
-from routes.utils import list_all_products, list_products_by_store, serialize_product, get_distance_expression
+from routes.utils import haversine, list_all_products, list_products_by_store, serialize_product, get_distance_expression
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 
 product_router = APIRouter(prefix="/product", tags=["products"])
 
 # Rota de lista de produto
 @product_router.get("/")
 async def get_list_products(
-    id_store: int = Query(None, description="Teste"),
+    id_category: int = Query(None, description="Teste"),
     page: int = Query(1, description="Page", ge=1),
+    limit: int = Query(25, description="Page size", ge=1, le=100),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
     session: Session = Depends(get_session)
 ):
-    page_size = 25
-    offset = (page - 1) * page_size
+    
+    offset = (page - 1) * limit
 
     distance_threshold = 10  # km
 
@@ -53,8 +54,11 @@ async def get_list_products(
     # Obter os IDs dos produtos com ofertas válidas
     product_ids = list(offers_by_product.keys())
 
-    # Obter os produtos correspondentes
-    products = session.query(Product).filter(Product.id.in_(product_ids)).all()
+    # Obter os produtos correspondentes, filtrando por categoria se id_category for fornecido
+    query = session.query(Product).filter(Product.id.in_(product_ids))
+    if id_category is not None:
+        query = query.filter(Product.id_category == id_category)
+    products = query.all()
 
     # Atribuir as ofertas a cada produto
     for product in products:
@@ -80,7 +84,7 @@ async def get_list_products(
     total_products = len(sorted_products)
 
     # Aplicar paginação: fatiar a lista de produtos
-    paginated_products = sorted_products[offset:offset + page_size]
+    paginated_products = sorted_products[offset:offset + limit]
 
     # Serializar os produtos paginados
     serialized_products = [
@@ -92,9 +96,9 @@ async def get_list_products(
     return {
         "products": serialized_products,
         "page": page,
-        "page_size": page_size,
+        "page_size": limit,
         "total_products": total_products,
-        "total_pages": (total_products + page_size - 1) // page_size
+        "total_pages": (total_products + limit - 1) // limit
     }
 
 @product_router.get("/categories")
@@ -129,7 +133,6 @@ async def get_nearby_stores(
         for id_store, name in stores
     ]
 
-# Rota de busca de produto único
 @product_router.get("/{id}")
 async def get_product(
     id: int,
@@ -137,10 +140,26 @@ async def get_product(
     lon: float = Query(description="User longitude"),
     session: Session = Depends(get_session)
 ):
-    product = (
-        session.query(Product)
-            .filter(Product.id == id)
-            .first()
-    )
-    
+    # pega o produto com todas as ofertas
+    product = session.query(Product).filter(Product.id == id).first()
+    if not product:
+        return None
+
+    today = date.today()
+    valid_offers = []
+    for offer in product.offers:
+        # 1) filtra expiração
+        exp_date = datetime.strptime(offer.expiration, "%Y-%m-%d").date()
+        if exp_date < today:
+            continue
+
+        # 2) calcula distância ao store_branch da oferta
+        sb = offer.store_branch  # assumindo relacionamento backref
+        dist = haversine(lat, lon, sb.latitude, sb.longitude)
+        if dist <= 10000:
+            valid_offers.append(offer)
+
+    # sobrescreve a lista de offers
+    product.offers = valid_offers
+
     return serialize_product(product, lat, lon)
