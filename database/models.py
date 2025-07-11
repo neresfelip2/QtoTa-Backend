@@ -13,6 +13,15 @@ class Product(Base):
     type = Column(String(255), nullable=False)
     origin = Column(String(255), nullable=False)
     expiration = Column(Integer, nullable=False)
+    id_category = Column(
+        Integer,
+        ForeignKey(
+            "category.id",
+            onupdate="CASCADE",
+            ondelete="SET NULL"
+        ),
+        nullable=True
+    )
 
     # Relacionamento 1:N com Offer
     offers = relationship(
@@ -20,10 +29,30 @@ class Product(Base):
         back_populates="product",
         cascade="all, delete-orphan"
     )
+    # Relacionamento N:1 com Category
+    category = relationship(
+        "Category",
+        back_populates="products"
+    )
 
     def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
+
+# Tabela Category
+class Category(Base):
+    __tablename__ = "category"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    url_icon = Column(String(255))
+    products = relationship(
+        "Product",
+        back_populates="category",
+        cascade="all, delete-orphan"
+    )
+
+    def __init__(self, name: str):
+        self.name = name
 
 # Tabela Store
 class Store(Base):
