@@ -1,68 +1,63 @@
 from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
 from database.models import Product, StoreBranch, Store, Category, Offer
-from sqlalchemy import func, text
-from sqlalchemy.orm import Session
-from routes.utils import haversine, list_all_products, list_products_by_store, serialize_product, get_distance_expression
-from collections import defaultdict
+from sqlalchemy.orm import Session, contains_eager
+from sqlalchemy import func
+from routes.utils import haversine, serialize_product, get_distance_expression
 from datetime import date, datetime
 
 product_router = APIRouter(prefix="/product", tags=["products"])
 
-# Rota de lista de produto
 @product_router.get("/")
-async def get_list_products(
-    id_category: int = Query(None, description="Teste"),
-    page: int = Query(1, description="Page", ge=1),
-    limit: int = Query(25, description="Page size", ge=1, le=100),
+async def get_products(
+    id_category: int = Query(None, description="Filter by category ID"),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
+    page: int = Query(1, description="Number of products per page"),
+    limit: int = Query(25, description="Limit of products per page"),
     session: Session = Depends(get_session)
 ):
-    
-    offset = (page - 1) * limit
-
+    limit_products = 5
     distance_threshold = 10  # km
 
-    # Encontrar filiais próximas usando a fórmula de Haversine
-    query = session.query(StoreBranch).filter(
-        text(
-            "(6371 * acos("
-            "cos(radians(:lat)) * cos(radians(latitude)) * "
-            "cos(radians(longitude) - radians(:lon)) + "
-            "sin(radians(:lat)) * sin(radians(latitude))"
-            ")) <= :dist"
+    # expressão de distância rotulada
+    distance_expr = (
+        6371 * func.acos(
+            func.cos(func.radians(lat)) * func.cos(func.radians(StoreBranch.latitude)) *
+            func.cos(func.radians(StoreBranch.longitude) - func.radians(lon)) +
+            func.sin(func.radians(lat)) * func.sin(func.radians(StoreBranch.latitude))
         )
-    ).params(lat=lat, lon=lon, dist=distance_threshold)
-    nearby_store_branches = query.all()
+    ).label("distance")
+
+    # montando a query: seleciona a entidade + o distance label
+    nearby_store_branches = (
+        session.query(StoreBranch, distance_expr)
+            .filter(distance_expr <= distance_threshold)
+            .all()
+    )
 
     # Obter os IDs das filiais próximas
-    store_branch_ids = [sb.id for sb in nearby_store_branches]
+    store_branch_ids = [sb.id for sb, _ in nearby_store_branches]
 
-    # Obter ofertas válidas (não expiradas) nas filiais próximas
+
     today = date.today()
-    valid_offers = session.query(Offer).filter(
+    product_filters = [
         Offer.id_store_branch.in_(store_branch_ids),
-        text("CAST(expiration AS DATE) >= :today")
-    ).params(today=today).all()
+        Offer.expiration >= today
+    ]
 
-    # Agrupar ofertas por produto
-    offers_by_product = defaultdict(list)
-    for offer in valid_offers:
-        offers_by_product[offer.id_product].append(offer)
-
-    # Obter os IDs dos produtos com ofertas válidas
-    product_ids = list(offers_by_product.keys())
-
-    # Obter os produtos correspondentes, filtrando por categoria se id_category for fornecido
-    query = session.query(Product).filter(Product.id.in_(product_ids))
+    # só adiciona o filtro de categoria se vier no request
     if id_category is not None:
-        query = query.filter(Product.id_category == id_category)
-    products = query.all()
+        product_filters.append(Product.id_category == id_category)
 
-    # Atribuir as ofertas a cada produto
-    for product in products:
-        product.offers = offers_by_product.get(product.id, [])
+    # Obter os produtos correspondentes
+    products = (
+        session.query(Product)
+            .join(Offer, Offer.id_product == Product.id)
+            .filter(*product_filters)
+            .options(contains_eager(Product.offers))
+            .all()
+    )
 
     # Função para calcular a porcentagem de desconto
     def calculate_discount_pct(offers):
@@ -78,40 +73,15 @@ async def get_list_products(
         return ((avg_price - min_price) / avg_price) * 100
 
     # Ordenar os produtos pela porcentagem de desconto em ordem decrescente
-    sorted_products = sorted(products, key=lambda p: calculate_discount_pct(p.offers), reverse=True)
-
-    # Calcular o total de produtos
-    total_products = len(sorted_products)
-
-    # Aplicar paginação: fatiar a lista de produtos
-    paginated_products = sorted_products[offset:offset + limit]
+    sorted_products = sorted(products, key=lambda p: calculate_discount_pct(p.offers), reverse=True)[:limit_products]
 
     # Serializar os produtos paginados
     serialized_products = [
         serialize_product(product, lat, lon)
-        for product in paginated_products
+        for product in sorted_products
     ]
 
-    # Retornar os produtos paginados com informações de paginação
-    return {
-        "products": serialized_products,
-        "page": page,
-        "page_size": limit,
-        "total_products": total_products,
-        "total_pages": (total_products + limit - 1) // limit
-    }
-
-@product_router.get("/categories")
-async def get_product_categories(
-    session: Session = Depends(get_session)
-):
-    categories = (
-        session.query(Category)
-        .order_by(Category.name)
-        .all()
-    )
-    
-    return categories
+    return serialized_products
     
 @product_router.get("/nearby-stores")
 async def get_nearby_stores(
