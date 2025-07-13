@@ -1,13 +1,13 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
 
-# Substitua com as suas credenciais e banco
-DATABASE_URL = "mysql+pymysql://root@localhost:3306/qtota"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL)
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
+
+# no fim do arquivo, importe models e crie as tabelas:
 Base.metadata.create_all(bind=engine)
