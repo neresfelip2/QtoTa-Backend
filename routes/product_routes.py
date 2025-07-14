@@ -1,49 +1,29 @@
 from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
-from database.models import Product, StoreBranch, Store
-from sqlalchemy.orm import Session
-from routes.utils import list_all_products, list_products_by_store, serialize_product, get_distance_expression
+from database.models import Product
+from sqlalchemy.orm import Session, contains_eager
+from sqlalchemy import func
+from routes.utils import haversine, serialize_product, get_nearby_store_branches, get_store_branch_products, process_products
+from datetime import date, datetime
 
 product_router = APIRouter(prefix="/product", tags=["products"])
 
-# Rota de lista de produto
 @product_router.get("/")
-async def get_list_products(
-    id_store: int = Query(None, description="Teste"),
-    page: int = Query(1, description="Page", ge=1),
+async def get_products(
+    id_category: int = Query(None, description="Filter by category ID"),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
+    page: int = Query(1, description="Number of products page"),
+    limit: int = Query(5, description="Limit of products per page"),
     session: Session = Depends(get_session)
 ):
-    page_size = 50
-    offset = (page - 1) * page_size
-
-    if not id_store:
-        return list_all_products(page_size, offset, lat, lon, session)
-    else:
-        return list_products_by_store(id_store, page_size, offset, lat, lon, session)
     
-@product_router.get("/nearby-stores")
-async def get_nearby_stores(
-    lat: float = Query(description="User latitude"),
-    lon: float = Query(description="User longitude"),
-    session: Session = Depends(get_session)
-):
-    store_list_size = 10
-    stores = (
-        session.query(StoreBranch.id_store, Store.name)
-        .join(StoreBranch, Store.id == StoreBranch.id_store)
-        .order_by(get_distance_expression(lat, lon, StoreBranch.latitude, StoreBranch.longitude))
-        .limit(store_list_size)
-        .all()
-    )
+    # Obtendo as filiais próximas e produtos correspondentes
+    nearby_store_branches = get_nearby_store_branches(lat, lon, session)
+    store_branch_products = get_store_branch_products(nearby_store_branches, id_category, session)
 
-    return [
-        {"id_store" : id_store, "name" : name}
-        for id_store, name in stores
-    ]
+    return process_products(store_branch_products, lat, lon, page, limit)
 
-# Rota de busca de produto único
 @product_router.get("/{id}")
 async def get_product(
     id: int,
@@ -51,10 +31,26 @@ async def get_product(
     lon: float = Query(description="User longitude"),
     session: Session = Depends(get_session)
 ):
-    product = (
-        session.query(Product)
-            .filter(Product.id == id)
-            .first()
-    )
-    
+    # pega o produto com todas as ofertas
+    product = session.query(Product).filter(Product.id == id).first()
+    if not product:
+        return None
+
+    today = date.today()
+    valid_offers = []
+    for offer in product.offers:
+        # 1) filtra expiração
+        exp_date = datetime.strptime(offer.expiration, "%Y-%m-%d").date()
+        if exp_date < today:
+            continue
+
+        # 2) calcula distância ao store_branch da oferta
+        sb = offer.store_branch  # assumindo relacionamento backref
+        dist = haversine(lat, lon, sb.latitude, sb.longitude)
+        if dist <= 10000:
+            valid_offers.append(offer)
+
+    # sobrescreve a lista de offers
+    product.offers = valid_offers
+
     return serialize_product(product, lat, lon)
