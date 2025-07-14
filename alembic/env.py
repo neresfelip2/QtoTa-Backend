@@ -8,6 +8,25 @@ from alembic import context
 import sys
 import os
 
+
+# 1) Carrega as variáveis do .env
+from dotenv import load_dotenv
+load_dotenv()  # por padrão procura um arquivo .env na raiz
+
+# 2) Pega a URL do ambiente
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    raise RuntimeError("A variável DATABASE_URL não está definida no ambiente")
+
+# 3) Injeta no config do Alembic
+config = context.config
+config.set_main_option("sqlalchemy.url", database_url)
+
+# 4) Continua normalmente importando seus models
+fileConfig(config.config_file_name)
+from database.models import Base
+target_metadata = Base.metadata
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # this is the Alembic Config object, which provides

@@ -9,5 +9,4 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# no fim do arquivo, importe models e crie as tabelas:
 Base.metadata.create_all(bind=engine)
