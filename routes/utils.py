@@ -124,6 +124,7 @@ def serialize_product(p: Product, lat: float, lon: float) -> dict:
             "type" : p.type,
             "origin" : p.origin,
             "expiration": p.expiration,
+            "url_image": p.url_image,
             "stores" : [
                 {
                     "id" : o.store_branch.id_store,
@@ -135,7 +136,7 @@ def serialize_product(p: Product, lat: float, lon: float) -> dict:
                         if avg_price > 0 and o.current_price is not None
                         else 0
                     ),
-                    "previous_price" : o.previous_price,
+                    "previous_price" : 0,
                     "expiration_offer" : o.expiration,
                     "logo" : o.store_branch.store.logo,
                     "distance" : haversine(lat, lon, o.store_branch.latitude, o.store_branch.longitude),

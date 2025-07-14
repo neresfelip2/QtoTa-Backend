@@ -3,6 +3,11 @@ from sqlalchemy.orm import relationship
 from database.database import Base
 import enum
 
+class MeasureType(enum.Enum):
+    WEIGHT = "WEIGHT"
+    VOLUME = "VOLUME"
+    LENGTH = "LENGTH"
+
 # Tabela Category
 class Category(Base):
     __tablename__ = "category"
@@ -42,7 +47,6 @@ class Offer(Base):
         nullable=False
     )
     current_price = Column(Float, nullable=False)
-    previous_price = Column(Float, nullable=True)
     expiration = Column(String(10), nullable=False)
 
     # Relacionamentos
@@ -60,11 +64,6 @@ class Offer(Base):
         self.id_store_branch = id_store_branch
         self.current_value = current_value
         self.previous_value = previous_value
-
-class MeasureType(enum.Enum):
-    WEIGHT = "WEIGHT"
-    VOLUME = "VOLUME"
-    LENGTH = "LENGTH"
 
 # Tabela Product
 class Product(Base):
@@ -84,6 +83,7 @@ class Product(Base):
     type = Column(String(255), nullable=False)
     origin = Column(String(255), nullable=False)
     expiration = Column(Integer, nullable=False)
+    url_image = Column(String(255), nullable=True)
     id_category = Column(
         Integer,
         ForeignKey(

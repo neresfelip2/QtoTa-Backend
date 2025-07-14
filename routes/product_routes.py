@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
 from database.models import Product
-from sqlalchemy.orm import Session, contains_eager
-from sqlalchemy import func
+from sqlalchemy.orm import Session
 from routes.utils import haversine, serialize_product, get_nearby_store_branches, get_store_branch_products, process_products
 from datetime import date, datetime
 
