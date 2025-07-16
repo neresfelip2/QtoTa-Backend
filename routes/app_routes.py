@@ -16,7 +16,7 @@ async def get_home(
     
     # Obter as filiais próximas e produtos correspondentes
     nearby_store_branches = get_nearby_store_branches(lat, lon, session)
-    store_branch_products = get_store_branch_products(nearby_store_branches, None, session)
+    store_branch_products = get_store_branch_products(nearby_store_branches, None, None, session)
     
     # Obtendo as categorias dos produtos das filiais
     categories = set([p.category for p in store_branch_products])

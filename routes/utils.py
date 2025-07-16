@@ -234,7 +234,7 @@ def get_nearby_store_branches(lat: float, lon: float, session: Session):
 
     return nearby_store_branches
 
-def get_store_branch_products(nearby_store_branches, id_category, session: Session):
+def get_store_branch_products(nearby_store_branches, query: str, id_category: int, session: Session):
 
     # Obter os IDs das filiais próximas
     store_branch_ids = [sb.id for sb, _ in nearby_store_branches]
@@ -244,9 +244,18 @@ def get_store_branch_products(nearby_store_branches, id_category, session: Sessi
         Offer.id_store_branch.in_(store_branch_ids),
         Offer.expiration >= today
     ]
+    
+   # 3) Filtro por nome (accent‑ and case‑insensitive)
+    if query:
+        product_filters.append(
+            # aplica collation accent-insensitive diretamente na coluna
+            Product.name
+                   .collate("Latin1_General_CI_AI")
+                   .ilike(f"%{query}%")
+        )
 
-    # só adiciona o filtro de categoria se vier no request
-    if id_category is not None:
+    # filtrar por categoria, se fornecido
+    if id_category:
         product_filters.append(Product.id_category == id_category)
 
     products = (

@@ -9,6 +9,7 @@ product_router = APIRouter(prefix="/product", tags=["products"])
 
 @product_router.get("/")
 async def get_products(
+    query: str = Query(None, description="Search query for product name"),
     id_category: int = Query(None, description="Filter by category ID"),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
@@ -19,7 +20,7 @@ async def get_products(
     
     # Obtendo as filiais próximas e produtos correspondentes
     nearby_store_branches = get_nearby_store_branches(lat, lon, session)
-    store_branch_products = get_store_branch_products(nearby_store_branches, id_category, session)
+    store_branch_products = get_store_branch_products(nearby_store_branches, query, id_category, session)
 
     return process_products(store_branch_products, lat, lon, page, limit)
 
