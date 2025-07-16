@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Query, Depends
 from dependencies import get_session
 from sqlalchemy.orm import Session
-from routes.product_routes import get_nearby_store_branches, get_store_branch_products, process_products
-from database.models import Store
+from repository.store_repository import get_nearby_store_branches
+from routes.utils import get_store_branch_products, process_products
 
-app_router = APIRouter(prefix="/home", tags=["home"])
+home_router = APIRouter(prefix="/home", tags=["home"])
 
 # Rota de lista de produto
-@app_router.get("/")
+@home_router.get("/")
 async def get_home(
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),

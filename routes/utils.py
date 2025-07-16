@@ -165,7 +165,7 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
     return int(R * c)
 
-def get_distance_expression(lat1: float, lon1: float, lat2: float, lon2: float):
+def haversine_sql(lat1: float, lon1: float, lat2: float, lon2: float):
     return func.round(
         6371000 * 2 * func.asin(
             func.sqrt(
@@ -211,28 +211,6 @@ def process_products(products, lat: float, lon: float, page: int, limit: int):
     ]
 
     return serialized_products
-    
-def get_nearby_store_branches(lat: float, lon: float, session: Session):
-    distance_threshold = 10  # km
-
-    # expressão de distância rotulada
-    distance_expr = (
-        6371 * func.acos(
-            func.cos(func.radians(lat)) * func.cos(func.radians(StoreBranch.latitude)) *
-            func.cos(func.radians(StoreBranch.longitude) - func.radians(lon)) +
-            func.sin(func.radians(lat)) * func.sin(func.radians(StoreBranch.latitude))
-        )
-    ).label("distance")
-
-    # montando a query: seleciona a entidade + o distance label
-    nearby_store_branches = (
-        session.query(StoreBranch, distance_expr)
-            .filter(distance_expr <= distance_threshold)
-            .order_by("distance")
-            .all()
-    )
-
-    return nearby_store_branches
 
 def get_store_branch_products(nearby_store_branches, query: str, id_category: int, session: Session):
 

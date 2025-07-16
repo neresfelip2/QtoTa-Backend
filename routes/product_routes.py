@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
 from database.models import Product
 from sqlalchemy.orm import Session
-from routes.utils import haversine, serialize_product, get_nearby_store_branches, get_store_branch_products, process_products
+from routes.utils import haversine, serialize_product, get_store_branch_products, process_products
+from repository.store_repository import get_nearby_store_branches
 from datetime import date, datetime
 
 product_router = APIRouter(prefix="/product", tags=["products"])
