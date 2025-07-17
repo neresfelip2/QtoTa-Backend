@@ -1,5 +1,5 @@
 from database.models import Product, Offer, StoreBranch
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, contains_eager
 from datetime import date
 
 def get_store_branch_products(nearby_store_branches, query: str, id_category: int, session: Session):
@@ -31,8 +31,8 @@ def get_store_branch_products(nearby_store_branches, query: str, id_category: in
             .join(Offer, Offer.id_product == Product.id)
             .filter(*product_filters)
             .options(
-                joinedload(Product.offers)
-                    .joinedload(Offer.store_branch)
+                contains_eager(Product.offers)                       # Mapeia a JOIN “filtrada” em Product.offers
+                    .joinedload(Offer.store_branch)                  # e daí carrega store_branch → store normalmente
                     .joinedload(StoreBranch.store)
             )
             .all()
