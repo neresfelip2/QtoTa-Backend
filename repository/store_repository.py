@@ -1,18 +1,12 @@
 from database.models import StoreBranch, StoreBranch
-from sqlalchemy import func
 from sqlalchemy.orm import Session
+from routes.utils import haversine_sql
 
 def get_nearby_store_branches(lat: float, lon: float, session: Session):
-    distance_threshold = 10  # km
+    distance_threshold = 10000  # metros
 
     # expressão de distância rotulada
-    distance_expr = (
-        6371 * func.acos(
-            func.cos(func.radians(lat)) * func.cos(func.radians(StoreBranch.latitude)) *
-            func.cos(func.radians(StoreBranch.longitude) - func.radians(lon)) +
-            func.sin(func.radians(lat)) * func.sin(func.radians(StoreBranch.latitude))
-        )
-    ).label("distance")
+    distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
 
     # montando a query: seleciona a entidade + o distance label
     nearby_store_branches = (

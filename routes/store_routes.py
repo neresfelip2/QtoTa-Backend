@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query, Depends
 from dependencies import get_session
-from sqlalchemy import select, func, literal
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from database.models import StoreBranch
 from routes.utils import haversine_sql
@@ -13,15 +13,9 @@ async def get_nearby_stores(
     lon: float = Query(description="User longitude"),
     session: Session = Depends(get_session)
 ):
-    
-    R = 6371000  # Raio da Terra em metros
 
     # Expressão de cálculo da distância (fórmula de Haversine)
-    distance_expr = R * 2 * func.asin(func.sqrt(
-        func.power(func.sin(func.radians((StoreBranch.latitude - lat) / 2)), 2) +
-        func.cos(func.radians(lat)) * func.cos(func.radians(StoreBranch.latitude)) *
-        func.power(func.sin(func.radians((StoreBranch.longitude - lon) / 2)), 2)
-    ))
+    distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
 
     # Subconsulta para encontrar a distância mínima por loja
     min_distance_subquery = session.query(

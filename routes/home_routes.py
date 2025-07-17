@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Query, Depends
 from dependencies import get_session
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from repository.store_repository import get_nearby_store_branches
-from routes.utils import get_store_branch_products, process_products
+from repository.product_repository import get_store_branch_products
+from routes.utils import process_products, haversine_sql
 
 home_router = APIRouter(prefix="/home", tags=["home"])
 
@@ -22,7 +23,7 @@ async def get_home(
     categories = set([p.category for p in store_branch_products])
 
     # Processando produtos para a página inicial
-    products = process_products(store_branch_products, lat, lon, page=1, limit=5)
+    products = process_products(store_branch_products, lat, lon, page=1, limit=5)   
     
     # dicionário para armazenar a menor distância para cada loja
     nearest_nearby_store_branches = {}
@@ -38,7 +39,7 @@ async def get_home(
             {
                 "id": sb.id_store,
                 "name": sb.store.name,
-                "distance": round(distance * 1000),  # Convertendo de km para metros
+                "distance": round(distance),
                 "logo" : sb.store.logo,
             }
             for sb, distance in nearest_nearby_store_branches.values()

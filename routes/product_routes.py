@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
 from database.models import Product
 from sqlalchemy.orm import Session
-from routes.utils import haversine, serialize_product, get_store_branch_products, process_products
+from routes.utils import haversine, serialize_product_detail, process_products
 from repository.store_repository import get_nearby_store_branches
+from repository.product_repository import get_store_branch_products
 from datetime import date, datetime
 
 product_router = APIRouter(prefix="/product", tags=["products"])
@@ -54,4 +55,4 @@ async def get_product(
     # sobrescreve a lista de offers
     product.offers = valid_offers
 
-    return serialize_product(product, lat, lon)
+    return serialize_product_detail(product, lat, lon)
