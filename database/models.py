@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, CheckConstraint
 from sqlalchemy.orm import relationship
 from database.database import Base
 import enum
@@ -47,6 +47,7 @@ class Offer(Base):
         nullable=False
     )
     current_price = Column(Float, nullable=False)
+    start_date = Column(String(10), nullable=False)
     expiration = Column(String(10), nullable=False)
 
     # Relacionamentos
@@ -57,6 +58,13 @@ class Offer(Base):
     store_branch = relationship(
         "StoreBranch",
         back_populates="offers"
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            'start_date <= expiration',
+            name='ck_offer_date_order'
+        ),
     )
 
     def __init__(self, id_product: int, id_store_branch: int, current_value: float, previous_value: float = None):

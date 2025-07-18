@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Depends
 from dependencies import get_session
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 from repository.store_repository import get_nearby_store_branches
 from repository.product_repository import get_store_branch_products
-from routes.utils import process_products, haversine_sql
+from routes.utils import process_products
 
 home_router = APIRouter(prefix="/home", tags=["home"])
 

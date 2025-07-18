@@ -7,6 +7,10 @@ def get_store_branch_products(nearby_store_branches, query: str, id_category: in
     # Obter os IDs das filiais próximas
     store_branch_ids = [sb.id for sb, _ in nearby_store_branches]
 
+    if not store_branch_ids:
+        # Evita fazer a consulta, ou devolve logo []
+        return []
+
     today = date.today()
     product_filters = [
         Offer.id_store_branch.in_(store_branch_ids),

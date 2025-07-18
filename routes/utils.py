@@ -1,4 +1,4 @@
-from database.models import Product, Offer, StoreBranch, StoreBranch
+from database.models import Product
 from sqlalchemy import func
 
 import math
@@ -49,11 +49,7 @@ def serialize_product(p: Product, lat: float, lon: float) -> dict:
             "name": p.name,
             "description" : p.description,
             "price": p.offers[0].current_price,
-            "percentage": round(
-                ((avg_price - p.offers[0].current_price) / avg_price) * 100
-                    if avg_price > 0 and p.offers[0].current_price is not None
-                    else 0
-            ),
+            "percentage": round(((avg_price - p.offers[0].current_price) / avg_price) * 100),
             "url_image": p.url_image,
             "store": {
                 "id" : p.offers[0].store_branch.id_store,
