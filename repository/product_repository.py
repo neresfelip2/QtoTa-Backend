@@ -1,4 +1,5 @@
 from database.models import Product, Offer, StoreBranch
+from sqlalchemy import func
 from sqlalchemy.orm import Session, contains_eager
 from datetime import date
 
@@ -20,12 +21,8 @@ def get_store_branch_products(nearby_store_branches, query: str, id_category: in
    # 3) Filtro por nome (accent‑ and case‑insensitive)
     if query:
         product_filters.append(
-            # aplica collation accent-insensitive diretamente na coluna
-            Product.name
-                   .collate("Latin1_General_CI_AI")
-                   .ilike(f"%{query}%")
+            func.unaccent(Product.name).ilike(func.unaccent(f"%{query}%"))
         )
-
     # filtrar por categoria, se fornecido
     if id_category:
         product_filters.append(Product.id_category == id_category)

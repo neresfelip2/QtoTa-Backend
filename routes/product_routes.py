@@ -41,9 +41,9 @@ async def get_product(
     today = date.today()
     valid_offers = []
     for offer in product.offers:
-        # 1) filtra expiração
-        exp_date = datetime.strptime(offer.expiration, "%Y-%m-%d").date()
-        if exp_date < today:
+        # # 1) filtra expiração
+        # exp_date = datetime.strptime(offer.expiration, "%Y-%m-%d").date()
+        if offer.expiration < today:
             continue
 
         # 2) calcula distância ao store_branch da oferta

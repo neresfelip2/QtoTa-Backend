@@ -85,7 +85,7 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
-    description = Column(String(255), nullable=False)
+    description = Column(String(1000), nullable=False)
     measure = Column(Integer, nullable=False)
     measure_type = Column(Enum(MeasureType), nullable=False)
     type = Column(String(255), nullable=False)
@@ -99,7 +99,7 @@ class Product(Base):
             onupdate="CASCADE",
             ondelete="SET NULL"
         ),
-        nullable=True
+        nullable=False
     )
 
     # Relacionamento 1:N com Offer

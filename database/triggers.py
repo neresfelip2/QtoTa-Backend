@@ -27,3 +27,5 @@ BEGIN
     END
 END
 """)
+
+create_unaccent = "CREATE EXTENSION IF NOT EXISTS unaccent;"
