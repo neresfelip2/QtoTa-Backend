@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, CheckConstraint
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, CheckConstraint, Date
 from sqlalchemy.orm import relationship
 from database.database import Base
 import enum
@@ -47,8 +47,8 @@ class Offer(Base):
         nullable=False
     )
     current_price = Column(Float, nullable=False)
-    start_date = Column(String(10), nullable=False)
-    expiration = Column(String(10), nullable=False)
+    start_date = Column(Date, nullable=False)
+    expiration = Column(Date, nullable=False)
 
     # Relacionamentos
     product = relationship(
@@ -87,7 +87,7 @@ class Product(Base):
     name = Column(String(255), nullable=False)
     description = Column(String(255), nullable=False)
     measure = Column(Integer, nullable=False)
-    measure_type = Column(Enum(MeasureType, name="measure_type_enum"), nullable=False)
+    measure_type = Column(Enum(MeasureType), nullable=False)
     type = Column(String(255), nullable=False)
     origin = Column(String(255), nullable=False)
     expiration = Column(Integer, nullable=False)

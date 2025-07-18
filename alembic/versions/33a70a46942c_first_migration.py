@@ -1,8 +1,8 @@
-"""first migration
+"""first  migration
 
-Revision ID: 9b64e761e57f
+Revision ID: 33a70a46942c
 Revises: 
-Create Date: 2025-07-17 21:26:50.551257
+Create Date: 2025-07-18 11:06:24.844079
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9b64e761e57f'
+revision: str = '33a70a46942c'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -46,7 +46,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('description', sa.String(length=255), nullable=False),
     sa.Column('measure', sa.Integer(), nullable=False),
-    sa.Column('measure_type', sa.Enum('WEIGHT', 'VOLUME', 'LENGTH', name='measure_type_enum'), nullable=False),
+    sa.Column('measure_type', sa.Enum('WEIGHT', 'VOLUME', 'LENGTH', name='measuretype'), nullable=False),
     sa.Column('type', sa.String(length=255), nullable=False),
     sa.Column('origin', sa.String(length=255), nullable=False),
     sa.Column('expiration', sa.Integer(), nullable=False),
@@ -69,8 +69,8 @@ def upgrade() -> None:
     sa.Column('id_product', sa.Integer(), nullable=False),
     sa.Column('id_store_branch', sa.Integer(), nullable=False),
     sa.Column('current_price', sa.Float(), nullable=False),
-    sa.Column('start_date', sa.String(length=10), nullable=False),
-    sa.Column('expiration', sa.String(length=10), nullable=False),
+    sa.Column('start_date', sa.Date(), nullable=False),
+    sa.Column('expiration', sa.Date(), nullable=False),
     sa.CheckConstraint('start_date <= expiration', name='ck_offer_date_order'),
     sa.ForeignKeyConstraint(['id_product'], ['product.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['id_store_branch'], ['store_branch.id'], onupdate='CASCADE', ondelete='CASCADE'),
