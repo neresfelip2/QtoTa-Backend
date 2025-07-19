@@ -18,12 +18,9 @@ async def get_home(
     # Obter as filiais próximas e produtos correspondentes
     nearby_store_branches = get_nearby_store_branches(lat, lon, session)
     store_branch_products = get_store_branch_products(nearby_store_branches, None, None, session)
-    
-    # Obtendo as categorias dos produtos das filiais
-    categories = set([p.category for p in store_branch_products])
 
     # Processando produtos para a página inicial
-    products = process_products(store_branch_products, lat, lon, page=1, limit=5)   
+    products = process_products(store_branch_products, lat, lon, page=1, limit=4)   
     
     # dicionário para armazenar a menor distância para cada loja
     nearest_nearby_store_branches = {}
@@ -34,7 +31,6 @@ async def get_home(
 
     return {
         "products": products,
-        "categories" : categories,
         "nearby_stores" : [
             {
                 "id": sb.id_store,

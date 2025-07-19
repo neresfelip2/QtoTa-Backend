@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
-from database.models import Product
+from database.models import Product, Category
 from sqlalchemy.orm import Session
 from routes.utils import haversine, serialize_product_detail, process_products
 from repository.store_repository import get_nearby_store_branches
@@ -25,6 +25,13 @@ async def get_products(
     store_branch_products = get_store_branch_products(nearby_store_branches, query, id_category, session)
 
     return process_products(store_branch_products, lat, lon, page, limit)
+
+@product_router.get("/category")
+async def get_categories(
+    session: Session = Depends(get_session)
+):
+    categories = session.query(Category).all()
+    return categories
 
 @product_router.get("/{id}")
 async def get_product(

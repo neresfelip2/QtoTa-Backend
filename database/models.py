@@ -13,15 +13,16 @@ class Category(Base):
     __tablename__ = "category"
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
-    url_icon = Column(String(255))
+    url_icon = Column(String(255), nullable=True)
     products = relationship(
         "Product",
         back_populates="category",
         cascade="all, delete-orphan"
     )
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, url_icon: str = None):
         self.name = name
+        self.url_icon = url_icon
 
 # Tabela Offer
 class Offer(Base):
