@@ -47,7 +47,7 @@ def serialize_product(p: Product, lat: float, lon: float) -> dict:
     return {
             "id": p.id,
             "name": p.name,
-            "description" : p.description,
+            "expiration_offer" : p.offers[0].expiration,
             "price": p.offers[0].current_price,
             "percentage": round(((avg_price - p.offers[0].current_price) / avg_price) * 100),
             "url_image": p.url_image,
