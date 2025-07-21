@@ -3,7 +3,12 @@ from sqlalchemy import func, and_
 from sqlalchemy.orm import Session
 from routes.utils import haversine_sql
 
-def fetch_nearby_stores(lat: float, lon: float, session: Session):
+def fetch_nearby_stores(
+    session: Session,
+    lat: float,
+    lon: float,
+    limit: int = 10,
+):
     distance_threshold = 10000  # metros
 
     # expressão de distância rotulada
@@ -25,7 +30,6 @@ def fetch_nearby_stores(lat: float, lon: float, session: Session):
         session
         .query(
             Store,
-            #StoreBranch,
             subq.c.min_dist.label("distance")
         )
         .join(StoreBranch, StoreBranch.id_store == Store.id)
@@ -40,6 +44,7 @@ def fetch_nearby_stores(lat: float, lon: float, session: Session):
         # filtra só até o threshold
         .filter(subq.c.min_dist <= distance_threshold)
         .order_by(subq.c.min_dist)
+        .limit(limit)
     )
 
     return [

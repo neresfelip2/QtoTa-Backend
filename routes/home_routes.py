@@ -18,7 +18,7 @@ async def get_home(
         "products": fetch_products(
             session=session,
             lat=lat,
-            lon=lon
+            lon=lon,
         ),
         "nearby_stores": fetch_nearby_stores(
             session=session,

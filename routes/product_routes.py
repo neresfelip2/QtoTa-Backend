@@ -17,21 +17,21 @@ async def get_products(
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
     page: int = Query(1, description="Number of products page"),
-    limit: int = Query(5, description="Limit of products per page"),
+    limit: int = Query(10, description="Limit of products per page"),
     distance_threshold: int = Query(10, description="Max distance by km"),
     session: Session = Depends(get_session)
 ):
     
     return fetch_products(
-            session=session,
-            lat=lat,
-            lon=lon,
-            page=page,
-            limit=limit,
-            distance_threshold=distance_threshold,
-            query=query,
-            id_category=id_category
-        )
+        session=session,
+        lat=lat,
+        lon=lon,
+        page=page,
+        limit=limit,
+        distance_threshold=distance_threshold,
+        query=query,
+        id_category=id_category
+    )
 
 @product_router.get("/category")
 async def get_categories(

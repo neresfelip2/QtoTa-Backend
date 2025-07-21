@@ -8,7 +8,7 @@ def fetch_products(
     lat: float,
     lon: float,
     page: int = 1,
-    limit: int = 5,
+    limit: int = 4,
     distance_threshold: int = 10,
     query: str | None = None,
     id_category: int | None = None,
