@@ -38,16 +38,16 @@ class Offer(Base):
         ),
         nullable=False
     )
-    id_store_branch = Column(
+    id_store = Column(
         Integer,
         ForeignKey(
-            "store_branch.id",
+            "store.id",
             onupdate="CASCADE",
             ondelete="CASCADE"
         ),
         nullable=False
     )
-    current_price = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
     start_date = Column(Date, nullable=False)
     expiration = Column(Date, nullable=False)
 
@@ -56,8 +56,8 @@ class Offer(Base):
         "Product",
         back_populates="offers"
     )
-    store_branch = relationship(
-        "StoreBranch",
+    store = relationship(
+        "Store",
         back_populates="offers"
     )
 
@@ -68,21 +68,15 @@ class Offer(Base):
         ),
     )
 
-    def __init__(self, id_product: int, id_store_branch: int, current_value: float, previous_value: float = None):
+    def __init__(self, id_product: int, id_store: int, price: float, previous_value: float = None):
         self.id_product = id_product
-        self.id_store_branch = id_store_branch
-        self.current_value = current_value
+        self.id_store = id_store
+        self.price = price
         self.previous_value = previous_value
 
 # Tabela Product
 class Product(Base):
     __tablename__ = "product"
-
-    MEASURE_TYPES = (
-        ("WEIGHT", "WEIGHT"),
-        ("VOLUME", "VOLUME"),
-        ("LENGTH", "LENGTH"),
-    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
@@ -127,6 +121,12 @@ class Store(Base):
     name = Column(String(255), nullable=False)
     logo = Column(String(255))
 
+    offers = relationship(
+        "Offer",
+        back_populates="store",
+        cascade="all, delete-orphan"
+    )
+
     # Relacionamento 1:N com StoreBranch
     branches = relationship(
         "StoreBranch",
@@ -159,11 +159,6 @@ class StoreBranch(Base):
     store = relationship(
         "Store",
         back_populates="branches"
-    )
-    offers = relationship(
-        "Offer",
-        back_populates="store_branch",
-        cascade="all, delete-orphan"
     )
 
     def __init__(self, id_store: int, description: str, latitude: float, longitude: float):

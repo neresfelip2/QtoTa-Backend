@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
-from database.models import Product, Category
-from sqlalchemy.orm import Session
-from routes.utils import haversine, serialize_product_detail, process_products
-from repository.store_repository import get_nearby_store_branches
-from repository.product_repository import get_store_branch_products
-from datetime import date, datetime
+from database.models import Product, Category, Offer, Store
+from sqlalchemy.orm import Session, joinedload
+from repository.product_repository import fetch_products
+from routes.utils import haversine
 
 product_router = APIRouter(prefix="/product", tags=["products"])
+
+
+############### Recuperar a lista de produtos por maior percentagem de desconto ###############
 
 @product_router.get("/")
 async def get_products(
@@ -17,21 +18,35 @@ async def get_products(
     lon: float = Query(description="User longitude"),
     page: int = Query(1, description="Number of products page"),
     limit: int = Query(5, description="Limit of products per page"),
+    distance_threshold: int = Query(10, description="Max distance by km"),
     session: Session = Depends(get_session)
 ):
     
-    # Obtendo as filiais próximas e produtos correspondentes
-    nearby_store_branches = get_nearby_store_branches(lat, lon, session)
-    store_branch_products = get_store_branch_products(nearby_store_branches, query, id_category, session)
-
-    return process_products(store_branch_products, lat, lon, page, limit)
+    return fetch_products(
+            session=session,
+            lat=lat,
+            lon=lon,
+            page=page,
+            limit=limit,
+            distance_threshold=distance_threshold,
+            query=query,
+            id_category=id_category
+        )
 
 @product_router.get("/category")
 async def get_categories(
     session: Session = Depends(get_session)
 ):
-    categories = session.query(Category).all()
+    categories = (
+        session
+            .query(Category)
+            .order_by(Category.name)
+            .all()
+        )
     return categories
+
+
+############### Recuperar um produto específico ###############
 
 @product_router.get("/{id}")
 async def get_product(
@@ -41,25 +56,54 @@ async def get_product(
     session: Session = Depends(get_session)
 ):
     # pega o produto com todas as ofertas
-    product = session.query(Product).filter(Product.id == id).first()
+    product = (
+        session.query(Product)
+            .join(Offer, Offer.id_product == Product.id)
+            .options(
+                joinedload(Product.offers)
+                    .joinedload(Offer.store)
+                        .joinedload(Store.branches)
+            )
+            .filter(Product.id == id)
+            .first()
+    )
     if not product:
         return None
+    
+    product.offers.sort(key=lambda o: o.price)
 
-    today = date.today()
-    valid_offers = []
+    # 3) para cada oferta, encontra a branch mais próxima
+    stores_data = []
     for offer in product.offers:
-        # # 1) filtra expiração
-        # exp_date = datetime.strptime(offer.expiration, "%Y-%m-%d").date()
-        if offer.expiration < today:
-            continue
+        branches = offer.store.branches
+        # encontra a branch com menor distância
+        nearest = min(
+            branches,
+            key=lambda b: haversine(lat, lon, b.latitude, b.longitude)
+        )
+        # calcula distância para exibir
+        dist_m = haversine(lat, lon, nearest.latitude, nearest.longitude)
 
-        # 2) calcula distância ao store_branch da oferta
-        sb = offer.store_branch  # assumindo relacionamento backref
-        dist = haversine(lat, lon, sb.latitude, sb.longitude)
-        if dist <= 10000:
-            valid_offers.append(offer)
+        stores_data.append({
+            "id":       offer.store.id,
+            "name":     offer.store.name,
+            "branch":   nearest.description,
+            "distance": round(dist_m),           # metros, sem decimais
+            "price":    offer.price,
+            "logo":     offer.store.logo,
+            "expiration_offer": offer.expiration
+        })
 
-    # sobrescreve a lista de offers
-    product.offers = valid_offers
-
-    return serialize_product_detail(product, lat, lon)
+    # 4) monta dicionário final
+    return {
+        "id":           product.id,
+        "name":         product.name,
+        "description":  product.description,
+        "measure":      product.measure,
+        "measure_type": product.measure_type,
+        "type":         product.type,
+        "origin":       product.origin,
+        "expiration":   product.expiration,
+        "url_image":    product.url_image,
+        "stores":       stores_data
+    }

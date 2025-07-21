@@ -1,8 +1,8 @@
 """first  migration
 
-Revision ID: 33a70a46942c
+Revision ID: 107832fa8d67
 Revises: 
-Create Date: 2025-07-18 11:06:24.844079
+Create Date: 2025-07-20 11:19:35.232703
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '33a70a46942c'
+revision: str = '107832fa8d67'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -44,14 +44,14 @@ def upgrade() -> None:
     op.create_table('product',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.String(length=1000), nullable=False),
     sa.Column('measure', sa.Integer(), nullable=False),
     sa.Column('measure_type', sa.Enum('WEIGHT', 'VOLUME', 'LENGTH', name='measuretype'), nullable=False),
     sa.Column('type', sa.String(length=255), nullable=False),
     sa.Column('origin', sa.String(length=255), nullable=False),
     sa.Column('expiration', sa.Integer(), nullable=False),
     sa.Column('url_image', sa.String(length=255), nullable=True),
-    sa.Column('id_category', sa.Integer(), nullable=True),
+    sa.Column('id_category', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['id_category'], ['category.id'], onupdate='CASCADE', ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -67,13 +67,13 @@ def upgrade() -> None:
     op.create_table('offer',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('id_product', sa.Integer(), nullable=False),
-    sa.Column('id_store_branch', sa.Integer(), nullable=False),
-    sa.Column('current_price', sa.Float(), nullable=False),
+    sa.Column('id_store', sa.Integer(), nullable=False),
+    sa.Column('price', sa.Float(), nullable=False),
     sa.Column('start_date', sa.Date(), nullable=False),
     sa.Column('expiration', sa.Date(), nullable=False),
     sa.CheckConstraint('start_date <= expiration', name='ck_offer_date_order'),
     sa.ForeignKeyConstraint(['id_product'], ['product.id'], onupdate='CASCADE', ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['id_store_branch'], ['store_branch.id'], onupdate='CASCADE', ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['id_store'], ['store.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

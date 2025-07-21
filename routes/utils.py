@@ -6,7 +6,7 @@ import math
 # Transforma o resultado de uma query na tabela Product num objeto Product
 def serialize_product_detail(p: Product, lat: float, lon: float) -> dict:
 
-    prices = [o.current_price for o in p.offers if o.current_price is not None]
+    prices = [o.price for o in p.offers if o.price is not None]
     avg_price = sum(prices) / len(prices) if prices else 0
 
     return {
@@ -24,10 +24,10 @@ def serialize_product_detail(p: Product, lat: float, lon: float) -> dict:
                     "id" : o.store_branch.id_store,
                     "name" : o.store_branch.store.name,
                     "branch" : o.store_branch.description,
-                    "current_price" : o.current_price,
+                    "price" : o.price,
                     "discount_percentage": round(
-                        ((avg_price - o.current_price) / avg_price) * 100
-                        if avg_price > 0 and o.current_price is not None
+                        ((avg_price - o.price) / avg_price) * 100
+                        if avg_price > 0 and o.price is not None
                         else 0
                     ),
                     "previous_price" : 0,
@@ -39,24 +39,26 @@ def serialize_product_detail(p: Product, lat: float, lon: float) -> dict:
             ]
         }
 
-def serialize_product(p: Product, lat: float, lon: float) -> dict:
-    p.offers.sort(key=lambda o: o.current_price)
-    prices = [o.current_price for o in p.offers]
+def serialize_product(product: Product, lat: float, lon: float) -> dict:
+    product.offers.sort(key=lambda offer: offer.price)
+    prices = [offer.price for offer in product.offers]
     avg_price = sum(prices) / len(prices) if prices else 0
 
+    best_offer = product.offers[0]
+
     return {
-            "id": p.id,
-            "name": p.name,
-            "expiration_offer" : p.offers[0].expiration,
-            "price": p.offers[0].current_price,
-            "percentage": round(((avg_price - p.offers[0].current_price) / avg_price) * 100),
-            "url_image": p.url_image,
+            "id": product.id,
+            "name": product.name,
+            "expiration_offer" : best_offer.expiration,
+            "price": best_offer.price,
+            "percentage": round(((avg_price - best_offer.price) / avg_price) * 100),
+            "url_image": product.url_image,
             "store": {
-                "id" : p.offers[0].store_branch.id_store,
-                "name" : p.offers[0].store_branch.store.name,
-                "branch" : p.offers[0].store_branch.description,
-                "logo" : p.offers[0].store_branch.store.logo,
-                "distance" : haversine(lat, lon, p.offers[0].store_branch.latitude, p.offers[0].store_branch.longitude),
+                "id" : best_offer.store.id,
+                "name" : best_offer.store.name,
+                #"branch" : best_offer.store.store_branch.description,
+                "logo" : best_offer.store.logo,
+                #"distance" : haversine(lat, lon, best_offer.store_branch.latitude, best_offer.store_branch.longitude),
             }
         
         }
@@ -95,7 +97,7 @@ def process_products(products, lat: float, lon: float, page: int, limit: int):
     def calculate_discount_pct(offers):
         if not offers:
             return 0
-        prices = [offer.current_price for offer in offers if offer.current_price is not None]
+        prices = [offer.price for offer in offers if offer.price is not None]
         if not prices:
             return 0
         min_price = min(prices)
