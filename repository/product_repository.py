@@ -11,9 +11,16 @@ def fetch_products(
     limit: int = 4,
     distance_threshold: int = 10,
     query: str | None = None,
+    id_store: int | None = None,
     id_category: int | None = None,
 ):
     distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
+
+    filters = []
+
+    # filtrar por loja, se fornecido
+    if id_store:
+        filters.append(Store.id == id_store)
 
     # 1) subquery com row_number
     subq_branches = (
@@ -31,6 +38,7 @@ def fetch_products(
                 .label("rn")
         )
         .join(Store, Store.id == StoreBranch.id_store)
+        .filter(*filters)
         .subquery()
     )
 
@@ -54,6 +62,7 @@ def fetch_products(
             func.min(Offer.price).label("min_price"),
             ((1 - func.min(Offer.price)/func.avg(Offer.price)) * 100).label("percentage")
         )
+        .filter(Offer.id_store == subq_stores.c.id)
         .group_by(Offer.id_product)
         .subquery()
     )
@@ -67,6 +76,7 @@ def fetch_products(
         product_filters.append(
             func.unaccent(Product.name).ilike(func.unaccent(f"%{query}%"))
         )
+
     # filtrar por categoria, se fornecido
     if id_category:
         product_filters.append(Product.id_category == id_category)

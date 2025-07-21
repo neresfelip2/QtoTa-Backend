@@ -13,6 +13,7 @@ product_router = APIRouter(prefix="/product", tags=["products"])
 @product_router.get("/")
 async def get_products(
     query: str = Query(None, description="Search query for product name"),
+    id_store: int = Query(None, description="Filter by store"),
     id_category: int = Query(None, description="Filter by category ID"),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
@@ -30,6 +31,7 @@ async def get_products(
         limit=limit,
         distance_threshold=distance_threshold,
         query=query,
+        id_store=id_store,
         id_category=id_category
     )
 
