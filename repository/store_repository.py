@@ -7,7 +7,7 @@ def fetch_nearby_stores(
     session: Session,
     lat: float,
     lon: float,
-    limit: int = 10,
+    limit: int = None,
 ):
     distance_threshold = 10000  # metros
 
@@ -30,6 +30,7 @@ def fetch_nearby_stores(
         session
         .query(
             Store,
+            StoreBranch,
             subq.c.min_dist.label("distance")
         )
         .join(StoreBranch, StoreBranch.id_store == Store.id)
@@ -51,8 +52,48 @@ def fetch_nearby_stores(
         {
             "id": store.id,
             "name": store.name,
+            "latitude": branch.latitude,
+            "longitude": branch.longitude,
             "distance": round(distance),
             "logo" : store.logo,
         }
-        for store, distance in qry
+        for store, branch, distance in qry
+    ]
+
+def fetch_nearby_branches(
+    session: Session,
+    lat: float,
+    lon: float,
+    limit: int = None,
+):
+    distance_threshold = 10000  # metros
+
+    # expressão de distância rotulada
+    distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
+
+    # join da subquery para pegar só as filiais cuja distância = min_dist
+    qry = (
+        session
+        .query(
+            Store,
+            StoreBranch,
+            distance_expr
+        )
+        .join(StoreBranch, StoreBranch.id_store == Store.id)
+        # filtra só até o threshold
+        .filter(distance_expr <= distance_threshold)
+        .order_by("distance")
+        .limit(limit)
+    )
+
+    return [
+        {
+            "id": store.id,
+            "name": store.name,
+            "latitude": branch.latitude,
+            "longitude": branch.longitude,
+            "distance": round(distance),
+            "logo" : store.logo,
+        }
+        for store, branch, distance in qry
     ]
