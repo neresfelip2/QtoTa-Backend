@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Query
 from dependencies import get_session
 from database.models import Product, Category, Offer, Store
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 from repository.product_repository import fetch_products
 from routes.utils import haversine
+from typing import List
 
 product_router = APIRouter(prefix="/product", tags=["products"])
 
@@ -46,6 +48,29 @@ async def get_categories(
             .all()
         )
     return categories
+
+
+############### Obter quantidade de ofertas de acordo com os produtos ###############
+
+@product_router.get("/offer")
+def get_offers_by_product_list(
+    id: List[int] = Query(
+        None,
+        description="Lista de IDs de produtos para contar ofertas"
+    ),
+    session: Session = Depends(get_session)
+):
+    if not id:
+        return {}
+
+    results = (
+            session.query(Offer.id_product, func.count(Offer.id_product))
+                .filter(Offer.id_product.in_(id))
+                .group_by(Offer.id_product)
+                .all()
+        )
+        
+    return {id_product: count for id_product, count in results}
 
 
 ############### Recuperar um produto específico ###############
