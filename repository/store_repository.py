@@ -8,8 +8,8 @@ def fetch_nearby_stores(
     lat: float,
     lon: float,
     limit: int = None,
+    distance_threshold: int = 5000,
 ):
-    distance_threshold = 10000  # metros
 
     # expressão de distância rotulada
     distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
@@ -64,12 +64,22 @@ def fetch_nearby_branches(
     session: Session,
     lat: float,
     lon: float,
+    store_id: int = None,
     limit: int = None,
+    distance_threshold: int = 5000,
 ):
-    distance_threshold = 10000  # metros
 
     # expressão de distância rotulada
     distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
+
+    filter = [
+        distance_expr <= distance_threshold
+    ]
+
+    if store_id:
+        filter.append(
+            Store.id == store_id
+        )
 
     qry = (
         session
@@ -79,7 +89,7 @@ def fetch_nearby_branches(
             distance_expr
         )
         .join(StoreBranch, StoreBranch.id_store == Store.id)
-        .filter(distance_expr <= distance_threshold)
+        .filter(*filter)
         .order_by("distance")
         .limit(limit)
     )
@@ -88,6 +98,7 @@ def fetch_nearby_branches(
         {
             "id": store.id,
             "name": store.name,
+            "branch": branch.description,
             "latitude": branch.latitude,
             "longitude": branch.longitude,
             "distance": round(distance),

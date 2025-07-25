@@ -25,6 +25,7 @@ async def get_nearby_stores(
 
 @store_router.get("/branches")
 async def get_nearby_branches(
+    store_id: int = Query(None, description="Filter by store"),
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
     limit: int = None,
@@ -33,6 +34,7 @@ async def get_nearby_branches(
 
     return fetch_nearby_branches(
         session=session,
+        store_id=store_id,
         lat=lat,
         lon=lon,
         limit=limit,

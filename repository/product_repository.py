@@ -9,7 +9,7 @@ def fetch_products(
     lon: float,
     page: int = 1,
     limit: int = 4,
-    distance_threshold: int = 10,
+    distance_threshold: int = 5000,
     query: str | None = None,
     id_store: int | None = None,
     id_category: int | None = None,
@@ -91,7 +91,7 @@ def fetch_products(
     )
 
     # 4) filtros de produto (distância, busca, categoria)
-    product_filters = [subq_stores.c.distance <= distance_threshold * 1000]
+    product_filters = [subq_stores.c.distance <= distance_threshold]
     if query:
         product_filters.append(
             func.unaccent(Product.name).ilike(func.unaccent(f"%{query}%"))

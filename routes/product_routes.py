@@ -21,7 +21,6 @@ async def get_products(
     lon: float = Query(description="User longitude"),
     page: int = Query(1, description="Number of products page"),
     limit: int = Query(10, description="Limit of products per page"),
-    distance_threshold: int = Query(10, description="Max distance by km"),
     session: Session = Depends(get_session)
 ):
     
@@ -31,7 +30,6 @@ async def get_products(
         lon=lon,
         page=page,
         limit=limit,
-        distance_threshold=distance_threshold,
         query=query,
         id_store=id_store,
         id_category=id_category
