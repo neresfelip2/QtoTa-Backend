@@ -85,6 +85,9 @@ async def get_store_detail(
 
             offer.percentage = percentage
 
+        # Ordenar as ofertas por percentage em ordem decrescente
+        store.offers = sorted(store.offers, key=lambda offer: offer.percentage, reverse=True)
+
         return {
             "id": store.id,
             "name": store.name,
