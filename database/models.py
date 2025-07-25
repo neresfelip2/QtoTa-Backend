@@ -154,6 +154,7 @@ class StoreBranch(Base):
     description = Column(String(255), nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
+    address = Column(String(255), nullable=False)
 
     # Relacionamentos
     store = relationship(
@@ -161,11 +162,12 @@ class StoreBranch(Base):
         back_populates="branches"
     )
 
-    def __init__(self, id_store: int, description: str, latitude: float, longitude: float):
+    def __init__(self, id_store: int, description: str, latitude: float, longitude: float, address: str):
         self.id_store = id_store
         self.description = description
         self.latitude = latitude
         self.longitude = longitude
+        self.address = address
 
 # Tabela User
 class User(Base):

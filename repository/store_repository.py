@@ -71,7 +71,6 @@ def fetch_nearby_branches(
     # expressão de distância rotulada
     distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
 
-    # join da subquery para pegar só as filiais cuja distância = min_dist
     qry = (
         session
         .query(
@@ -80,7 +79,6 @@ def fetch_nearby_branches(
             distance_expr
         )
         .join(StoreBranch, StoreBranch.id_store == Store.id)
-        # filtra só até o threshold
         .filter(distance_expr <= distance_threshold)
         .order_by("distance")
         .limit(limit)
