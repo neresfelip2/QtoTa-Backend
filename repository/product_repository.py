@@ -9,10 +9,10 @@ def fetch_products(
     lon: float,
     page: int = 1,
     limit: int = 4,
-    distance_threshold: int = 5000,
     query: str | None = None,
     id_store: int | None = None,
     id_category: int | None = None,
+    distance_threshold: int = 5000,
 ):
     # expressão de distância (haversine)
     distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)

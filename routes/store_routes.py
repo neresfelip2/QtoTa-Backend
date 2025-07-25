@@ -45,9 +45,9 @@ async def get_store_detail(
     id: int,
     lat: float = Query(description="User latitude"),
     lon: float = Query(description="User longitude"),
+    distance_threshold: int = 5000,
     session: Session = Depends(get_session)
 ):
-    
     distance_expr = haversine_sql(lat, lon, StoreBranch.latitude, StoreBranch.longitude)
     
     store = (
@@ -60,7 +60,7 @@ async def get_store_detail(
                 contains_eager(Store.offers)
                     .contains_eager(Offer.product),
             )
-            .filter(Store.id == id, distance_expr <= 10000)
+            .filter(Store.id == id, distance_expr <= distance_threshold)
             .order_by(distance_expr)
             .one_or_none()
     )
