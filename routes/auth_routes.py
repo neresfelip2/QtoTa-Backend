@@ -2,26 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from dependencies import get_session, verify_token
 from database.models import User
 from schemas import UserScheme, LoginSchema
-from main import bcrypt_context, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-from jose import jwt, JWTError
-from datetime import datetime, timedelta, timezone
+from main import bcrypt_context
+from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
+from repository.auth_repository import get_user, create_token
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
-
-def create_token(id_user, duration=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
-    expiration_date = datetime.now(timezone.utc) + duration
-    dict_info = { "sub": str(id_user), "exp": expiration_date }
-    token = jwt.encode(dict_info, SECRET_KEY, ALGORITHM)
-    return token
-
-def authenticate_user(email, password, session):
-    user = session.query(User).filter(User.email==email).first()
-    if not user:
-        return False
-    elif not bcrypt_context.verify(password, user.password):
-        return False
-    return user
 
 @auth_router.post("/register")
 async def register(user_scheme: UserScheme, session = Depends(get_session)):
@@ -33,13 +19,21 @@ async def register(user_scheme: UserScheme, session = Depends(get_session)):
         new_user = User(user_scheme.name, user_scheme.email, encrypted_password)
         session.add(new_user)
         session.commit()
-        return { "success" : "User registered successfully" }
+        access_token = create_token(new_user.id)
+        refresh_token = create_token(new_user.id, duration=timedelta(days=7))
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type" : "Bearer"
+        }
     
 @auth_router.post("/login")
 async def login(login_scheme: LoginSchema, session = Depends(get_session)):
-    user = authenticate_user(login_scheme.email, login_scheme.password, session)
+    user = get_user(login_scheme.email, session)
     if not user:
-        raise HTTPException(status_code=400, detail="User not found or invalid password")
+        raise HTTPException(status_code=400, detail="Usuário não cadastrado")
+    elif not bcrypt_context.verify(login_scheme.password, user.password):
+        raise HTTPException(status_code=400, detail="Senha inválida")
     else:
         access_token = create_token(user.id)
         refresh_token = create_token(user.id, duration=timedelta(days=7))
@@ -51,9 +45,11 @@ async def login(login_scheme: LoginSchema, session = Depends(get_session)):
 
 @auth_router.post("/login-form")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), session = Depends(get_session)):
-    user = authenticate_user(form_data.username, form_data.password, session)
+    user = get_user(form_data.username, session)
     if not user:
-        raise HTTPException(status_code=400, detail="User not found or invalid password")
+        raise HTTPException(status_code=400, detail="Usuário não cadastrado")
+    elif not bcrypt_context.verify(form_data.password, user.password):
+        raise HTTPException(status_code=400, detail="Senha inválida")
     else:
         access_token = create_token(user.id)
         return {
